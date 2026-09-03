@@ -28,6 +28,8 @@ Built entirely with standard library tools, the system persists all operational 
 
 ## Final Project — Verification & Appointments Chatbot
 
+**🔗 Live demo: [ronishv.pythonanywhere.com](https://ronishv.pythonanywhere.com/)**
+
 ![Chatbot preview](demo/chatbot_preview.gif)
 
 `Chatbot/` adds a natural-language web chatbot on top of this exact codebase (no new

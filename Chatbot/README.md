@@ -1,5 +1,7 @@
 # צ'אטבוט אימות ותורים
 
+**🔗 גרסה חיה: [ronishv.pythonanywhere.com](https://ronishv.pythonanywhere.com/)**
+
 ![תצוגה מקדימה של הצ'אטבוט](../demo/chatbot_preview.gif)
 
 שכבת שיחה טבעית מעל מערכת ניהול התורים הקיימת ב-`../MidProject`. הבוט מזהה לקוח לפי שם חופשי,
