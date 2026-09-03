@@ -8,12 +8,15 @@
 -- ============================================================
 
 -- Customers table (Bonus 1 — Customer Management)
+-- id_number: Israeli ID card number (תעודת זהות), used ONLY for identity
+-- verification in the chatbot layer — never exposed before a successful match.
 CREATE TABLE IF NOT EXISTS customers (
-    id      INTEGER PRIMARY KEY AUTOINCREMENT,
-    name    TEXT    NOT NULL,
-    phone   TEXT,
-    email   TEXT,
-    address TEXT
+    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    name      TEXT    NOT NULL,
+    phone     TEXT,
+    email     TEXT,
+    address   TEXT,
+    id_number TEXT
 );
 
 -- Appointments table — core of the project (mandatory requirement)

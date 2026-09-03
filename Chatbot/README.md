@@ -1,0 +1,61 @@
+# צ'אטבוט אימות ותורים
+
+**🔗 גרסה חיה: [ronishv.pythonanywhere.com](https://ronishv.pythonanywhere.com/)**
+
+![תצוגה מקדימה של הצ'אטבוט](../demo/chatbot_preview.gif)
+
+שכבת שיחה טבעית מעל מערכת ניהול התורים הקיימת ב-`../MidProject`. הבוט מזהה לקוח לפי שם חופשי,
+מאמת אותו מול תעודת זהות אמיתית, ולאחר מכן שולף את התור האמיתי שלו ומתקן אותו אם טעה בתאריך.
+
+זו לא מערכת חדשה — כל הגישה לנתונים (`features/customers.py`, `features/appointments.py`)
+היא אותו קוד שנכתב בפרויקט האמצע. הצ'אטבוט רק מוסיף שכבת NLU + אימות + שיחה מעליו.
+
+## מבנה
+
+| קובץ | תפקיד |
+|---|---|
+| `app.py` | שרת Flask — נתיבי `/`, `/api/chat`, `/api/reset` |
+| `conversation.py` | מכונת המצבים של השיחה (הליבה: זיהוי → הבהרה → אימות → תשובה) |
+| `nlu.py` | חילוץ `{name, claimed_date}` מטקסט חופשי דרך Gemini (עם fallback חוקי בלי מפתח) |
+| `reply_builder.py` | ניסוח התשובה הסופית לאחר אימות, כולל השוואת תאריכים |
+| `gemini_client.py` | עטיפה אחת ויחידה סביב ה-SDK של Gemini |
+| `templates/index.html` | ממשק צ'אט פשוט (HTML/CSS/JS, ללא framework) |
+
+## הרצה מקומית
+
+```bash
+cd Chatbot
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+pip install -r requirements.txt
+
+copy .env.example .env
+# ערכו את .env והוסיפו GEMINI_API_KEY משלכם (חינמי): https://aistudio.google.com/apikey
+
+python app.py
+```
+
+פתחו http://localhost:5000
+
+> **הערה:** גם בלי מפתח Gemini האפליקציה עולה ועובדת — חילוץ השם/תאריך ("nlu.py") וניסוח
+> התשובה ("reply_builder.py") נופלים אוטומטית לתבנית חוקית פשוטה. עם מפתח, השיחה זורמת בעברית
+> טבעית יותר.
+
+## חוקי האבטחה שהמימוש אוכף
+
+- **אין חשיפת מידע לפני אימות מוצלח** — שום תאריך/שעה/פרט לא נשלח למשתמש עד שתעודת הזהות
+  הותאמה בדיוק מול מה שרשום ללקוח (`features/customers.py::verify_identity`).
+- **הגבלת ניסיונות** — 3 ניסיונות ת"ז שגויים (`MAX_VERIFY_ATTEMPTS` ב-`.env`) ואז חסימה מנומסת.
+- **אין ניחוש** — אם יש כמה לקוחות עם שם דומה, הבוט תמיד שואל הבהרה במקום לבחור אחד מהם.
+
+## תרחישי הבדיקה
+
+ראו `TEST_SCENARIOS.md` — חמשת התרחישים מהבריף, עם דוגמת קלט/פלט מדויקת לכל אחד.
+
+בנוסף, `tests/test_conversation.py` מריץ את כל התרחישים האלה **אוטומטית** (כולל חוקי
+האבטחה — אין דליפת מידע, חסימה אחרי 3 ניסיונות), מול מסד נתונים זמני ובלי תלות ב-Gemini:
+
+```bash
+cd Chatbot
+pytest -v
+```
