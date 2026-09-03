@@ -17,15 +17,16 @@ Implements Bonus 1 (customer management portion):
 from db import get_connection
 
 
-def add_customer(name: str, phone: str = "", email: str = "", address: str = "") -> int:
+def add_customer(name: str, phone: str = "", email: str = "", address: str = "", id_number: str = "") -> int:
     """
     Insert a new customer into the database.
 
     Args:
-        name:    Customer's full name (required, non-empty).
-        phone:   Phone number (optional).
-        email:   Email address (optional).
-        address: Physical address (optional).
+        name:      Customer's full name (required, non-empty).
+        phone:     Phone number (optional).
+        email:     Email address (optional).
+        address:   Physical address (optional).
+        id_number: Israeli ID card number, used for chatbot identity verification (optional).
 
     Returns:
         The integer ID of the newly created customer.
@@ -36,9 +37,9 @@ def add_customer(name: str, phone: str = "", email: str = "", address: str = "")
     if not name.strip():
         raise ValueError("Customer name cannot be empty.")
 
-    sql = "INSERT INTO customers (name, phone, email, address) VALUES (?, ?, ?, ?)"
+    sql = "INSERT INTO customers (name, phone, email, address, id_number) VALUES (?, ?, ?, ?, ?)"
     with get_connection() as conn:
-        cursor = conn.execute(sql, (name.strip(), phone.strip(), email.strip(), address.strip()))
+        cursor = conn.execute(sql, (name.strip(), phone.strip(), email.strip(), address.strip(), id_number.strip()))
         return cursor.lastrowid
 
 
@@ -49,7 +50,7 @@ def get_all_customers() -> list:
     Returns:
         A list of sqlite3.Row objects.
     """
-    sql = "SELECT id, name, phone, email, address FROM customers ORDER BY name"
+    sql = "SELECT id, name, phone, email, address, id_number FROM customers ORDER BY name"
     with get_connection() as conn:
         return conn.execute(sql).fetchall()
 
@@ -64,9 +65,63 @@ def get_customer_by_id(customer_id: int):
     Returns:
         A sqlite3.Row if found, or None if no customer matches.
     """
-    sql = "SELECT id, name, phone, email, address FROM customers WHERE id = ?"
+    sql = "SELECT id, name, phone, email, address, id_number FROM customers WHERE id = ?"
     with get_connection() as conn:
         return conn.execute(sql, (customer_id,)).fetchone()
+
+
+def search_customers_by_name(partial_name: str) -> list:
+    """
+    Search customers by partial, case-insensitive name match.
+
+    Used by the chatbot's NLU layer: the user types a free-text name, and this
+    returns every customer that could match, so the caller can decide whether
+    the match is unique or needs a clarifying question (e.g. two "Ronit"s).
+
+    Args:
+        partial_name: A full or partial name to search for (non-empty).
+
+    Returns:
+        A list of sqlite3.Row objects (id, name, phone, email, address, id_number),
+        ordered alphabetically. Empty list if nothing matches.
+    """
+    if not partial_name or not partial_name.strip():
+        return []
+
+    sql = """
+        SELECT id, name, phone, email, address, id_number
+        FROM customers
+        WHERE LOWER(name) LIKE ?
+        ORDER BY name
+    """
+    with get_connection() as conn:
+        return conn.execute(sql, (f"%{partial_name.strip().lower()}%",)).fetchall()
+
+
+def verify_identity(customer_id: int, claimed_id_number: str) -> bool:
+    """
+    Verify a claimed ID number against the stored value for a given customer.
+
+    This is the ONLY function that should gate access to personal data
+    (appointments, invoices, etc.) in the chatbot flow. A customer with no
+    id_number on file can never be verified (fails closed, not open).
+
+    Args:
+        customer_id:       The candidate customer's ID.
+        claimed_id_number: The ID number the user typed in the chat.
+
+    Returns:
+        True only if the customer exists, has an id_number on file, and it
+        matches the claimed value exactly (after stripping whitespace).
+    """
+    customer = get_customer_by_id(customer_id)
+    if customer is None:
+        return False
+    stored = (customer["id_number"] or "").strip()
+    claimed = (claimed_id_number or "").strip()
+    if not stored or not claimed:
+        return False
+    return stored == claimed
 
 
 def delete_customer(customer_id: int) -> bool:

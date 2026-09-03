@@ -28,21 +28,25 @@ print("Seeding database with sample data...\n")
 # ─────────────────────────────────────────────────────────────────────────────
 
 customer_data = [
-    ("דני לוי",        "050-1234567", "danny@gmail.com",    "רחוב הרצל 12, תל אביב"),
-    ("מיכל כהן",       "052-9876543", "michal@walla.co.il", "שדרות בן גוריון 5, חיפה"),
-    ("יוסי ברוך",      "054-1112233", "yossi@gmail.com",    "רחוב ויצמן 8, ירושלים"),
-    ("שרה גולדשטיין",  "053-4455667", "sara@gmail.com",     "אבן גבירול 22, תל אביב"),
-    ("אמיר פרץ",       "058-8889900", "amir@hotmail.com",   "הנשיא 3, חדרה"),
-    ("ליאור שפירא",    "050-6677889", "lior@gmail.com",     "דיזנגוף 55, תל אביב"),
-    ("נועה אברהם",     "052-3344556", "noa@gmail.com",      "הגפן 10, פתח תקווה"),
-    ("רוני אוחיון",    "054-7788990", "roni@walla.co.il",   "רמב\"ם 7, נתניה"),
-    ("תמר לוינטל",     "053-2233445", "tamar@gmail.com",    "הבנים 14, ראשון לציון"),
-    ("גיל מזרחי",      "058-5566778", "gil@gmail.com",      "כצנלסון 9, גבעתיים"),
+    # (name, phone, email, address, id_number)
+    ("דני לוי",        "050-1234567", "danny@gmail.com",    "רחוב הרצל 12, תל אביב",        "200000001"),
+    ("מיכל כהן",       "052-9876543", "michal@walla.co.il", "שדרות בן גוריון 5, חיפה",       "200000002"),
+    ("יוסי ברוך",      "054-1112233", "yossi@gmail.com",    "רחוב ויצמן 8, ירושלים",         "200000003"),
+    ("שרה גולדשטיין",  "053-4455667", "sara@gmail.com",     "אבן גבירול 22, תל אביב",        "200000004"),
+    ("אמיר פרץ",       "058-8889900", "amir@hotmail.com",   "הנשיא 3, חדרה",                "200000005"),
+    ("ליאור שפירא",    "050-6677889", "lior@gmail.com",     "דיזנגוף 55, תל אביב",           "200000006"),
+    ("נועה אברהם",     "052-3344556", "noa@gmail.com",      "הגפן 10, פתח תקווה",            "200000007"),
+    ("רוני אוחיון",    "054-7788990", "roni@walla.co.il",   "רמב\"ם 7, נתניה",               "200000008"),
+    ("תמר לוינטל",     "053-2233445", "tamar@gmail.com",    "הבנים 14, ראשון לציון",         "200000009"),
+    ("גיל מזרחי",      "058-5566778", "gil@gmail.com",      "כצנלסון 9, גבעתיים",            "200000010"),
+    # Extra customer sharing a first name with #1 ("דני") — needed to test the
+    # "ambiguous name → bot asks for clarification" scenario from the brief.
+    ("דני כהן",        "050-1112222", "dani.cohen@gmail.com","העצמאות 20, רמת גן",           "200000011"),
 ]
 
 cust_ids = []
-for name, phone, email, addr in customer_data:
-    cid = customers.add_customer(name, phone, email, addr)
+for name, phone, email, addr, id_number in customer_data:
+    cid = customers.add_customer(name, phone, email, addr, id_number)
     cust_ids.append(cid)
     print(f"  Customer added: {name} (ID {cid})")
 

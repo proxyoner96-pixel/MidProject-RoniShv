@@ -26,6 +26,16 @@ Built entirely with standard library tools, the system persists all operational 
 
 ---
 
+## Final Project — Verification & Appointments Chatbot
+
+`Chatbot/` adds a natural-language web chatbot on top of this exact codebase (no new
+CRUD, no duplicate data access): a customer types a free-text sentence, the bot
+identifies them, verifies their ID number against the real record, and reports their
+real appointment — correcting them if they misremembered the date. See
+[`Chatbot/README.md`](Chatbot/README.md) for how it works,
+[`DEPLOY.md`](DEPLOY.md) for running it locally or deploying it, and
+[`demo/chatbot_demo.mp4`](demo/chatbot_demo.mp4) for a recorded end-to-end walkthrough.
+
 ## Project Structure
 
 ```text
@@ -41,3 +51,11 @@ MidProject/
     ├── customers.py        # Customer CRUD & appointment/invoice history
     ├── invoice.py          # Sequential invoice generator & ledger
     └── leads.py            # Lead lifecycle & customer conversion workflows
+
+Chatbot/
+├── app.py                  # Flask server (chat page + /api/chat + /api/reset)
+├── conversation.py         # Conversation state machine — identify → confirm → verify → answer
+├── nlu.py                  # Gemini-based free-text extraction (name + claimed date)
+├── reply_builder.py        # Final natural-language reply, with real-data date comparison
+├── gemini_client.py        # Single wrapper around the Gemini API (google-genai SDK)
+└── templates/index.html    # Chat UI
