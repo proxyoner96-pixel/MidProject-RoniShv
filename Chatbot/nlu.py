@@ -77,7 +77,11 @@ def _fallback_extract(message: str) -> dict:
         collected = []
         for word in name_match.group(1).split():
             clean = word.strip(",.")
-            if not clean or clean in stopwords or any(ch.isdigit() for ch in clean):
+            # Also check the word with a leading "ו" (vav conjunction, "and...")
+            # stripped, so "ויש" / "ולי" / "ותור" are recognized as connectors
+            # too, not just their bare forms.
+            unprefixed = clean[1:] if clean.startswith("ו") and len(clean) > 1 else clean
+            if not clean or clean in stopwords or unprefixed in stopwords or any(ch.isdigit() for ch in clean):
                 break
             collected.append(clean)
             if len(collected) >= 3:

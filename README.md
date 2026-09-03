@@ -28,6 +28,8 @@ Built entirely with standard library tools, the system persists all operational 
 
 ## Final Project — Verification & Appointments Chatbot
 
+![Chatbot preview](demo/chatbot_preview.gif)
+
 `Chatbot/` adds a natural-language web chatbot on top of this exact codebase (no new
 CRUD, no duplicate data access): a customer types a free-text sentence, the bot
 identifies them, verifies their ID number against the real record, and reports their

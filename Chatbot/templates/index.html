@@ -3,23 +3,29 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>צ'אטבוט תורים ואימות</title>
+<title>מאלף כלבים · צ'אטבוט תורים</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%BE%3C/text%3E%3C/svg%3E">
 <style>
   :root {
-    --bg: #f4f6fb;
+    --bg-top: #eef1fc;
+    --bg-bottom: #f6f3ff;
     --card: #ffffff;
-    --primary: #4f46e5;
-    --primary-dark: #4338ca;
-    --bot-bubble: #eef0f7;
-    --user-bubble: #4f46e5;
-    --text: #1f2333;
-    --muted: #6b7280;
+    --primary: #6c5ce7;
+    --primary-dark: #5849c2;
+    --accent: #00c2a8;
+    --bot-bubble: #f1f0fb;
+    --user-bubble-a: #6c5ce7;
+    --user-bubble-b: #8a6ff0;
+    --text: #201f33;
+    --muted: #8b8aa3;
+    --online: #22c55e;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    font-family: "Segoe UI", Arial, sans-serif;
-    background: linear-gradient(180deg, #eef1fb 0%, #f4f6fb 100%);
+    font-family: "Segoe UI", "Rubik", Arial, sans-serif;
+    background: radial-gradient(1200px 600px at 20% -10%, #ded9ff 0%, transparent 60%),
+                linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
     min-height: 100vh;
     display: flex;
     align-items: center;
@@ -28,123 +34,233 @@
   }
   .chat-card {
     width: 100%;
-    max-width: 480px;
-    height: 640px;
+    max-width: 440px;
+    height: 680px;
     background: var(--card);
-    border-radius: 20px;
-    box-shadow: 0 20px 45px rgba(31, 35, 51, 0.12);
+    border-radius: 24px;
+    box-shadow: 0 30px 60px -15px rgba(76, 60, 160, 0.35), 0 2px 8px rgba(0,0,0,0.04);
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.6);
   }
   .chat-header {
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    background: linear-gradient(135deg, var(--primary), var(--user-bubble-b) 60%, var(--accent) 130%);
     color: white;
     padding: 18px 20px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 12px;
+    position: relative;
   }
-  .chat-header h1 {
-    font-size: 16px;
+  .avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.22);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.35);
+  }
+  .header-text { flex: 1; min-width: 0; }
+  .header-text h1 {
+    font-size: 15px;
     margin: 0;
-    font-weight: 600;
+    font-weight: 700;
+    letter-spacing: .2px;
   }
-  .chat-header p {
-    margin: 2px 0 0;
-    font-size: 12px;
-    opacity: 0.85;
+  .status-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 3px;
+    font-size: 11.5px;
+    opacity: 0.92;
+  }
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--online);
+    box-shadow: 0 0 0 3px rgba(34,197,94,0.28);
+    flex-shrink: 0;
   }
   .reset-btn {
-    background: rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.2);
     border: none;
     color: white;
-    padding: 6px 12px;
+    padding: 7px 14px;
     border-radius: 999px;
     font-size: 12px;
     cursor: pointer;
+    font-weight: 600;
+    transition: background .15s;
+    white-space: nowrap;
   }
-  .reset-btn:hover { background: rgba(255,255,255,0.3); }
+  .reset-btn:hover { background: rgba(255,255,255,0.34); }
   .messages {
     flex: 1;
     overflow-y: auto;
-    padding: 18px;
+    padding: 20px 16px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    background: var(--bg);
+    gap: 4px;
+    background:
+      radial-gradient(600px 300px at 100% 0%, rgba(108,92,231,0.05), transparent 60%),
+      var(--bg-bottom);
   }
+  .row {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    margin: 6px 0;
+    animation: rise .22s ease-out;
+  }
+  .row.user { flex-direction: row-reverse; }
+  @keyframes rise {
+    from { transform: translateY(8px); opacity: 0; }
+    to   { transform: translateY(0);   opacity: 1; }
+  }
+  .mini-avatar {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0; color: white;
+  }
+  .bubble-wrap { display: flex; flex-direction: column; max-width: 76%; }
   .bubble {
-    max-width: 78%;
     padding: 10px 14px;
-    border-radius: 16px;
+    border-radius: 17px;
     font-size: 14px;
-    line-height: 1.5;
+    line-height: 1.55;
     white-space: pre-wrap;
-    animation: pop .15s ease-out;
+    word-break: break-word;
   }
-  @keyframes pop { from { transform: scale(.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-  .bot {
-    align-self: flex-start;
+  .bot .bubble {
     background: var(--bot-bubble);
     color: var(--text);
-    border-bottom-left-radius: 4px;
+    border-bottom-left-radius: 5px;
   }
-  .user {
-    align-self: flex-end;
-    background: var(--user-bubble);
+  .user .bubble {
+    background: linear-gradient(135deg, var(--user-bubble-a), var(--user-bubble-b));
     color: white;
-    border-bottom-right-radius: 4px;
+    border-bottom-right-radius: 5px;
+    box-shadow: 0 4px 14px -4px rgba(108,92,231,0.55);
   }
-  .typing {
-    align-self: flex-start;
+  .timestamp {
+    font-size: 10px;
     color: var(--muted);
-    font-size: 12px;
+    margin-top: 3px;
     padding: 0 4px;
   }
+  .row.user .timestamp { text-align: right; }
+  .row.bot .timestamp { text-align: left; }
+  .typing-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+  .typing-bubble {
+    background: var(--bot-bubble);
+    padding: 12px 16px;
+    border-radius: 17px;
+    border-bottom-left-radius: 5px;
+    display: flex;
+    gap: 4px;
+  }
+  .typing-bubble span {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--muted);
+    display: inline-block;
+    animation: bounce 1.2s infinite ease-in-out;
+  }
+  .typing-bubble span:nth-child(2) { animation-delay: .15s; }
+  .typing-bubble span:nth-child(3) { animation-delay: .3s; }
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: .5; }
+    30% { transform: translateY(-5px); opacity: 1; }
+  }
+  .quick-replies {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 4px 4px 14px;
+  }
+  .chip {
+    background: white;
+    border: 1px solid #e3e0fa;
+    color: var(--primary-dark);
+    padding: 7px 13px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all .15s;
+  }
+  .chip:hover { background: var(--primary); color: white; border-color: var(--primary); }
   .input-row {
     display: flex;
     gap: 8px;
     padding: 14px;
     background: var(--card);
-    border-top: 1px solid #eceef4;
+    border-top: 1px solid #eeecf9;
   }
   .input-row input {
     flex: 1;
-    border: 1px solid #dfe2ee;
+    border: 1.5px solid #e3e0fa;
     border-radius: 999px;
-    padding: 10px 16px;
+    padding: 11px 17px;
     font-size: 14px;
     outline: none;
+    transition: border-color .15s;
+    background: #fbfaff;
   }
-  .input-row input:focus { border-color: var(--primary); }
+  .input-row input:focus { border-color: var(--primary); background: white; }
   .input-row button {
-    background: var(--primary);
+    background: linear-gradient(135deg, var(--primary), var(--user-bubble-b));
     color: white;
     border: none;
     border-radius: 999px;
-    padding: 0 20px;
-    font-size: 14px;
+    width: 44px;
+    height: 44px;
+    font-size: 16px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: transform .12s, box-shadow .12s;
+    box-shadow: 0 6px 16px -4px rgba(108,92,231,0.55);
   }
-  .input-row button:hover { background: var(--primary-dark); }
-  .input-row button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .input-row button:hover:not(:disabled) { transform: translateY(-1px) scale(1.03); }
+  .input-row button:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+  .footer-note {
+    text-align: center;
+    font-size: 10.5px;
+    color: var(--muted);
+    padding: 0 0 10px;
+    background: var(--card);
+  }
+  .messages::-webkit-scrollbar { width: 6px; }
+  .messages::-webkit-scrollbar-thumb { background: #d8d4f5; border-radius: 999px; }
 </style>
 </head>
 <body>
   <div class="chat-card">
     <div class="chat-header">
-      <div>
-        <h1>העוזר הדיגיטלי שלנו</h1>
-        <p>בירור ואימות תורים</p>
+      <div class="avatar">🐾</div>
+      <div class="header-text">
+        <h1>מאלף כלבים · עוזר דיגיטלי</h1>
+        <div class="status-line">
+          <span class="status-dot"></span>
+          <span>זמין עכשיו · אימות ותורים</span>
+        </div>
       </div>
       <button class="reset-btn" id="resetBtn">שיחה חדשה</button>
     </div>
     <div class="messages" id="messages"></div>
     <div class="input-row">
       <input id="messageInput" type="text" placeholder="כתוב/י הודעה..." autocomplete="off">
-      <button id="sendBtn">שליחה</button>
+      <button id="sendBtn" aria-label="שליחה">➤</button>
     </div>
+    <div class="footer-note">מאובטח · מופעל באמצעות Gemini AI</div>
   </div>
 
 <script>
@@ -153,12 +269,58 @@
   const sendBtn = document.getElementById('sendBtn');
   const resetBtn = document.getElementById('resetBtn');
 
+  const BOT_AVATAR = '🐾';
+
+  function timeNow() {
+    const d = new Date();
+    return d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+  }
+
   function addBubble(text, who) {
-    const div = document.createElement('div');
-    div.className = 'bubble ' + who;
-    div.textContent = text;
-    messagesEl.appendChild(div);
+    const row = document.createElement('div');
+    row.className = 'row ' + who;
+
+    if (who === 'bot') {
+      const av = document.createElement('div');
+      av.className = 'mini-avatar';
+      av.textContent = BOT_AVATAR;
+      row.appendChild(av);
+    }
+
+    const wrap = document.createElement('div');
+    wrap.className = 'bubble-wrap';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = text;
+
+    const ts = document.createElement('div');
+    ts.className = 'timestamp';
+    ts.textContent = timeNow();
+
+    wrap.appendChild(bubble);
+    wrap.appendChild(ts);
+    row.appendChild(wrap);
+
+    messagesEl.appendChild(row);
     messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function showTyping() {
+    const row = document.createElement('div');
+    row.className = 'typing-row';
+    row.id = 'typingRow';
+    row.innerHTML = `
+      <div class="mini-avatar">${BOT_AVATAR}</div>
+      <div class="typing-bubble"><span></span><span></span><span></span></div>
+    `;
+    messagesEl.appendChild(row);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function hideTyping() {
+    const row = document.getElementById('typingRow');
+    if (row) row.remove();
   }
 
   function setLoading(isLoading) {
@@ -166,12 +328,19 @@
     input.disabled = isLoading;
   }
 
-  async function sendMessage() {
-    const text = input.value.trim();
+  function removeQuickReplies() {
+    const qr = document.getElementById('quickReplies');
+    if (qr) qr.remove();
+  }
+
+  async function sendMessage(overrideText) {
+    const text = (overrideText !== undefined ? overrideText : input.value).trim();
     if (!text) return;
+    removeQuickReplies();
     addBubble(text, 'user');
     input.value = '';
     setLoading(true);
+    showTyping();
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -179,8 +348,10 @@
         body: JSON.stringify({ message: text })
       });
       const data = await res.json();
+      hideTyping();
       addBubble(data.reply, 'bot');
     } catch (err) {
+      hideTyping();
       addBubble('מצטער, קרתה תקלה בתקשורת עם השרת. נסה/י שוב.', 'bot');
     } finally {
       setLoading(false);
@@ -188,18 +359,43 @@
     }
   }
 
+  function showQuickReplies() {
+    removeQuickReplies();
+    const wrap = document.createElement('div');
+    wrap.className = 'quick-replies';
+    wrap.id = 'quickReplies';
+    const suggestions = ['יש לי תור, מה השעה?', 'קוראים לי דני', 'אני רוצה לוודא תור'];
+    suggestions.forEach(s => {
+      const chip = document.createElement('button');
+      chip.className = 'chip';
+      chip.type = 'button';
+      chip.textContent = s;
+      chip.addEventListener('click', () => sendMessage(s));
+      wrap.appendChild(chip);
+    });
+    messagesEl.appendChild(wrap);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
   async function resetChat() {
     await fetch('/api/reset', { method: 'POST' });
     messagesEl.innerHTML = '';
-    addBubble('שלום! מה שמך, ובאיזה תאריך את/ה חושב/ת שיש לך תור?', 'bot');
+    addBubble('היי, וואף וואף! 🐶 מה שמך, ובאיזה תאריך את/ה חושב/ת שיש לך תור?', 'bot');
+    showQuickReplies();
   }
 
-  sendBtn.addEventListener('click', sendMessage);
+  sendBtn.addEventListener('click', () => sendMessage());
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
   resetBtn.addEventListener('click', resetChat);
 
-  // Greeting on first load.
-  addBubble('שלום! מה שמך, ובאיזה תאריך את/ה חושב/ת שיש לך תור?', 'bot');
+  // On every page load/refresh, force a real server-side reset FIRST.
+  // Without this, the greeting bubble below would show "start of a new
+  // conversation" while the Flask session cookie (which survives reloads)
+  // still held a PREVIOUSLY VERIFIED customer's state — so the next message
+  // would silently reuse that old identity instead of asking for a new one.
+  // That is exactly the "no data before verification" rule the brief
+  // requires, so this reset is a security fix, not just a UX nicety.
+  resetChat();
   input.focus();
 </script>
 </body>
