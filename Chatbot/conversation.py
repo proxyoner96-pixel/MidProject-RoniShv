@@ -18,14 +18,26 @@ conversation state (a plain JSON-serializable dict — easy to store in a
 Flask session cookie) and the user's new message, it returns
 (reply_text, new_state). It never touches Flask directly, which makes it
 trivial to unit-test without spinning up a web server.
+
+IMPORTANT — state hygiene:
+The state dict is stored client-side in the Flask session cookie, which is
+*signed but not encrypted* — the user can decode and read it. Therefore the
+state must contain ONLY non-sensitive fields: stage name, candidate id, the
+candidate's name (which the user already typed themselves), the user's own
+claimed date, and the attempt counter. Never store ID numbers, phone
+numbers, emails, or raw DB rows here.
 """
 
+import logging
 import os
 import re
 from datetime import datetime
+from typing import Tuple
 
 from features import customers
 from reply_builder import build_verified_reply
+
+logger = logging.getLogger(__name__)
 
 MAX_ATTEMPTS = int(os.environ.get("MAX_VERIFY_ATTEMPTS", "3"))
 
@@ -36,15 +48,30 @@ STAGE_AWAIT_ID = "await_id"
 STAGE_VERIFIED = "verified"
 STAGE_BLOCKED = "blocked"
 
-_AFFIRMATIVE = {"כן", "נכון", "yes", "כן.", "בטח", "אכן", "נכון מאוד", "yep", "ye", "y"}
-_NEGATIVE = {"לא", "לא נכון", "no", "לא.", "nope"}
+# The DB stores Israeli-local wall-clock times, but the production server
+# (PythonAnywhere) runs in UTC. All "upcoming vs past" comparisons are
+# therefore done in Israel's timezone. If the platform has no timezone
+# database (e.g. Windows without the `tzdata` pip package), we fall back to
+# naive local time — same behaviour as before, just less precise.
+try:
+    from zoneinfo import ZoneInfo
+    BUSINESS_TZ = ZoneInfo("Asia/Jerusalem")
+except Exception:  # pragma: no cover
+    BUSINESS_TZ = None
+
+# Hebrew answers that merely *start* with כן/לא ("כן.", "לא נכון", ...) are
+# covered by the prefix matching in _is_affirmative / _is_negative, so the
+# sets only need the standalone variants.
+_AFFIRMATIVE = {"נכון", "נכון מאוד", "בטח", "אכן", "yes", "yep", "ye", "y"}
+_NEGATIVE = {"no", "nope"}
 
 
 def initial_state() -> dict:
     return {"stage": STAGE_NEW, "attempts": 0}
 
 
-def _reset(keep_greeting: bool = False) -> dict:
+def _reset() -> dict:
+    """Fresh conversation state — used whenever we abandon the current path."""
     return initial_state()
 
 
@@ -65,36 +92,54 @@ def _extract_id_number(text: str) -> str:
     return digits
 
 
+def _parse_appointment_dt(appt):
+    """Parse an appointment's date+time (free-text 'DD/MM/YYYY HH:MM' in the
+    DB) into a datetime anchored to the business timezone, or None if the
+    stored text is unparsable (logged, not silently swallowed)."""
+    try:
+        dt = datetime.strptime(
+            f"{appt['appointment_date']} {appt['appointment_time']}",
+            "%d/%m/%Y %H:%M",
+        )
+    except (ValueError, TypeError):
+        logger.warning(
+            "Skipping appointment with unparsable date/time: %r / %r",
+            appt["appointment_date"],
+            appt["appointment_time"],
+        )
+        return None
+    if BUSINESS_TZ is not None:
+        dt = dt.replace(tzinfo=BUSINESS_TZ)
+    return dt
+
+
 def _find_best_appointment(customer_id: int):
     """
     Return the single most relevant appointment for a verified customer, or
     None if they have none.
 
     Preference order: nearest upcoming Pending appointment; if there is no
-    Pending appointment, the most recent Completed one; Cancelled
-    appointments are ignored (an appointment the customer no longer has is
-    not "their real appointment").
+    Pending appointment, the most recent one that isn't Cancelled (an
+    appointment the customer no longer has is not "their real appointment").
 
     Dates are stored as free-text DD/MM/YYYY strings in the DB, so we parse
-    them here rather than relying on lexicographic SQL ordering.
+    them here rather than relying on lexicographic SQL ordering, and compare
+    against "now" in Israel's timezone (see BUSINESS_TZ above).
     """
     history = customers.get_customer_history(customer_id)
     parsed = []
     for appt in history["appointments"]:
         if appt["status"] == "Cancelled":
             continue
-        try:
-            dt = datetime.strptime(
-                f"{appt['appointment_date']} {appt['appointment_time']}", "%d/%m/%Y %H:%M"
-            )
-        except ValueError:
+        dt = _parse_appointment_dt(appt)
+        if dt is None:
             continue
         parsed.append((dt, appt))
 
     if not parsed:
         return None
 
-    now = datetime.now()
+    now = datetime.now(BUSINESS_TZ) if BUSINESS_TZ else datetime.now()
     pending_future = [(dt, a) for dt, a in parsed if a["status"] == "Pending" and dt >= now]
     if pending_future:
         pending_future.sort(key=lambda pair: pair[0])
@@ -105,7 +150,7 @@ def _find_best_appointment(customer_id: int):
     return parsed[0][1]
 
 
-def handle_message(state: dict, text: str) -> tuple:
+def handle_message(state: dict, text: str) -> Tuple[str, dict]:
     """
     Advance the conversation by one turn.
 
@@ -177,7 +222,10 @@ def handle_message(state: dict, text: str) -> tuple:
                 names_list = ", ".join(m["name"] for m in matches)
                 new_state = {
                     "stage": STAGE_AWAIT_NAME_CLARIFICATION,
-                    "candidates": [dict(m) for m in matches],
+                    # Only id + name go into the cookie state. The session
+                    # cookie is readable by the client, so full customer rows
+                    # (id_number, phone, email, ...) must NEVER be stored here.
+                    "candidates": [{"id": m["id"], "name": m["name"]} for m in matches],
                     "claimed_date": claimed_date,
                     "attempts": 0,
                 }

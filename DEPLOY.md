@@ -6,23 +6,32 @@
 ## 1. הרצה מקומית
 
 ### מערכת הבסיס (CLI)
+
 ```bash
-cd MidProject
+# מתוך תיקיית הפרויקט (התיקייה שמכילה את main.py)
 python main.py
 ```
 
+> **הערה:** קובץ `appointments.db` נוצר אוטומטית בהרצה הראשונה — `init_db()` ב-`db.py`
+> מריץ את `schema.sql` ויוצר את הטבלאות. אין צורך (ואסור) להעלות קובץ DB ל-git —
+> הוא מכיל נתוני לקוחות. ראו `.gitignore`.
+
 ### הצ'אטבוט (Web)
+
 ```bash
 cd Chatbot
 python -m venv .venv
-.venv\Scripts\activate            # Windows; מק/לינוקס: source .venv/bin/activate
+.venv\Scripts\activate            # Windows CMD; PowerShell: .venv\Scripts\Activate.ps1
+                                  # מק/לינוקס: source .venv/bin/activate
 pip install -r requirements.txt
 
 copy .env.example .env            # מק/לינוקס: cp .env.example .env
 # ערכו את .env: הוסיפו GEMINI_API_KEY (חינמי מ-https://aistudio.google.com/apikey)
+# אופציונלי: MAX_VERIFY_ATTEMPTS (ברירת מחדל 3)
 
 python app.py
 ```
+
 פתחו בדפדפן: http://localhost:5000
 
 ## 2. פריסה לשרת חינמי — PythonAnywhere (מומלץ)
@@ -69,12 +78,16 @@ python app.py
    ```
 8. לחצו **Reload** בעמוד ה-Web. האתר עולה בכתובת `USERNAME.pythonanywhere.com`.
 
+> **מסד הנתונים בשרת:** גם כאן `appointments.db` נוצר אוטומטית בהפעלה הראשונה.
+> רוצים נתוני דמו? הריצו פעם אחת את ה-CLI מהקונסולה והזינו נתונים, או העלו קובץ DB
+> מקומי דרך לשונית Files. **לא להעלות DB אמיתי ל-git.**
+
 ### נוהל עדכון שרת (חוזר, בכל פעם שיש קוד חדש)
 
 זהו נוהל ה-DevOps המינימלי שהבריף דורש — לא אוטומטי (בלי CI/CD), אבל קבוע ומתועד:
 
 ```bash
-# 1. בלשונית Consoles, פתחו Bash console (או "$ בהמשך" בקונסולה קיימת)
+# 1. בלשונית Consoles, פתחו Bash console (או המשיכו בקונסולה קיימת)
 cd ~/MidProject-RoniShv
 git pull                          # מושך את השינויים האחרונים מ-GitHub
 
@@ -84,8 +97,18 @@ pip install -r requirements.txt   # רק אם requirements.txt השתנה
 
 # 2. בלשונית Web, לחצו על כפתור "Reload" הירוק ליד שם האתר
 ```
+
 זהו. אין צורך בשום דבר נוסף — אין build אוטומטי, זו משיכה ידנית + הפעלה מחדש,
 בדיוק כפי שהבריף מבקש, אבל בתור נוהל עקבי שכתוב פה ולא "עשיתי פעם ושכחתי".
+
+### Rollback (אם העדכון שבר משהו)
+
+```bash
+cd ~/MidProject-RoniShv
+git log --oneline -5              # מצאו את הקומיט האחרון שעבד
+git revert <commit-hash>          # יוצר קומיט הפוך, בלי לשכות היסטוריה
+# ואז Reload בלשונית Web
+```
 
 ## 3. אלטרנטיבה: Render (אם מעדיפים)
 
@@ -97,3 +120,11 @@ pip install -r requirements.txt   # רק אם requirements.txt השתנה
 
 1. גלשו ל-`https://USERNAME.pythonanywhere.com/healthz` — אמור להחזיר `{"status": "ok"}`.
 2. גלשו לעמוד הראשי ונסו את התרחיש המרכזי (ראו `Chatbot/TEST_SCENARIOS.md`).
+
+## 5. עקרונות אבטחה
+
+- `GEMINI_API_KEY` חי רק ב-`.env` — לעולם לא בקוד ולא ב-git. אם המפתח דלף פעם
+  להיסטוריית git — **יש להחליף אותו** ב-AI Studio.
+- `appointments.db` ו-`.env` חייבים להופיע ב-`.gitignore`.
+- מצב השיחה של הצ'אטבוט נשמר בקוקי חתום (לא מוצפן) ולכן מכיל רק שדות לא רגישים —
+  ראו הסבר בראש `conversation.py`.

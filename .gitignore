@@ -11,3 +11,5 @@ Chatbot/.env
 # OS
 .DS_Store
 Thumbs.db
+# Database — customer data stays out of version control
+*.db
