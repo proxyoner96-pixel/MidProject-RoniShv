@@ -10,9 +10,39 @@ require no network access or API key.
 Run with:
     pytest
 (from the Chatbot/ directory — conftest.py there sets up the import paths).
+
+Review-response notes:
+  - Scenario 2 (ambiguous name) now asserts the bot does NOT echo any
+    customer names to an unverified user — only asks for the full name.
+  - Scenario 2 also checks that no appointment details leak in the
+    clarification reply.
+  - A sanity-check test guards the fixture itself, so the suite fails fast
+    (with a clear reason) if the seeded data is missing rather than
+    silently passing "on empty".
 """
 
 import conversation
+
+
+def test_fixture_sanity_seeded_data_is_present(seeded_customers):
+    """Guard the fixture: fail fast with a clear reason if the seeded data
+    is missing, so the rest of the suite never passes 'on empty'."""
+    from features import customers, appointments
+
+    all_customers = customers.search_customers_by_name("דני")
+    assert len(all_customers) >= 2, (
+        "Fixture problem: expected at least 2 customers named דני "
+        "(ambiguous-name scenario depends on them)"
+    )
+
+    rotem = customers.search_customers_by_name("רותם")
+    assert len(rotem) == 1, "Fixture problem: expected exactly 1 customer named רותם"
+
+    history = customers.get_customer_history(seeded_customers["rotem_id"])
+    assert len(history["appointments"]) >= 1, (
+        "Fixture problem: רותם must have at least one appointment for the "
+        "correction scenario"
+    )
 
 
 def test_unique_name_with_wrong_claimed_date_gets_corrected(seeded_customers):
@@ -38,16 +68,41 @@ def test_unique_name_with_wrong_claimed_date_gets_corrected(seeded_customers):
 
 def test_ambiguous_first_name_asks_for_clarification_not_a_guess(seeded_customers):
     """Scenario 2: two customers share a first name → the bot must ask which
-    one, never silently pick one."""
+    one, never silently pick one.
+
+    Privacy (review feedback): the clarification reply must NOT echo the
+    other customers' names — the user is still unverified, and revealing
+    which customers exist is information leakage. The bot must simply ask
+    for the full name.
+    """
     state = conversation.initial_state()
 
     reply, state = conversation.handle_message(state, "קוראים לי דני")
     assert state["stage"] == conversation.STAGE_AWAIT_NAME_CLARIFICATION
-    assert "דני לוי" in reply and "דני כהן" in reply
+    # No customer names may be echoed to an unverified user.
+    assert "דני לוי" not in reply
+    assert "דני כהן" not in reply
+    # And no appointment details either (review feedback: check for leaks here too).
+    assert "2099" not in reply and "09:00" not in reply and "טיול" not in reply
+    # The bot must still move the conversation forward — ask for the full name.
+    assert "שם המלא" in reply
 
+    # The full name resolves to exactly one candidate → confirmation stage.
     reply, state = conversation.handle_message(state, "דני כהן")
     assert state["stage"] == conversation.STAGE_AWAIT_CONFIRM
     assert "דני כהן" in reply
+
+
+def test_ambiguous_name_wrong_full_name_keeps_asking_without_leaking(seeded_customers):
+    """If the user can't produce a full name that matches, the bot keeps
+    asking — still without ever revealing which candidates exist."""
+    state = conversation.initial_state()
+    _, state = conversation.handle_message(state, "קוראים לי דני")
+    assert state["stage"] == conversation.STAGE_AWAIT_NAME_CLARIFICATION
+
+    reply, state = conversation.handle_message(state, "דני לא קיים בכלל")
+    assert state["stage"] == conversation.STAGE_AWAIT_NAME_CLARIFICATION
+    assert "דני לוי" not in reply and "דני כהן" not in reply
 
 
 def test_verified_customer_with_no_appointment(seeded_customers):

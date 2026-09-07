@@ -4,7 +4,8 @@ conversation.py
 The chatbot's conversation state machine.
 
 This module owns ALL the rules from the project brief:
-  - Search by partial name; if ambiguous, ask for clarification (never guess).
+  - Search by partial name; if ambiguous, ask for the full name WITHOUT
+    revealing which customers exist, and never guess.
   - Confirm the matched name before asking for anything sensitive.
   - Never reveal any personal data (date, time, anything) before a
     successful ID-number match against the real data.
@@ -32,6 +33,7 @@ import logging
 import os
 import re
 from datetime import datetime
+from enum import Enum
 from typing import Tuple
 
 from features import customers
@@ -41,12 +43,30 @@ logger = logging.getLogger(__name__)
 
 MAX_ATTEMPTS = int(os.environ.get("MAX_VERIFY_ATTEMPTS", "3"))
 
-STAGE_NEW = "new"
-STAGE_AWAIT_NAME_CLARIFICATION = "await_name_clarification"
-STAGE_AWAIT_CONFIRM = "await_confirm"
-STAGE_AWAIT_ID = "await_id"
-STAGE_VERIFIED = "verified"
-STAGE_BLOCKED = "blocked"
+
+class Stage(str, Enum):
+    """
+    All possible conversation stages.
+
+    Subclasses str so that values survive JSON round-trips in the session
+    cookie and compare equal to their plain strings ('new' == Stage.NEW).
+    (Review feedback: enum-based state management instead of bare strings.)
+    """
+    NEW = "new"
+    AWAIT_NAME_CLARIFICATION = "await_name_clarification"
+    AWAIT_CONFIRM = "await_confirm"
+    AWAIT_ID = "await_id"
+    VERIFIED = "verified"
+    BLOCKED = "blocked"
+
+
+# Backwards-compatible aliases — existing code and tests import these names.
+STAGE_NEW = Stage.NEW
+STAGE_AWAIT_NAME_CLARIFICATION = Stage.AWAIT_NAME_CLARIFICATION
+STAGE_AWAIT_CONFIRM = Stage.AWAIT_CONFIRM
+STAGE_AWAIT_ID = Stage.AWAIT_ID
+STAGE_VERIFIED = Stage.VERIFIED
+STAGE_BLOCKED = Stage.BLOCKED
 
 # The DB stores Israeli-local wall-clock times, but the production server
 # (PythonAnywhere) runs in UTC. All "upcoming vs past" comparisons are
@@ -189,10 +209,10 @@ def handle_message(state: dict, text: str) -> Tuple[str, dict]:
                 if len(loose) == 1:
                     match = loose[0]
             if match is None:
-                names_list = ", ".join(c["name"] for c in candidates)
+                # Privacy (review feedback): never echo the candidates' names.
                 return (
-                    f"לא הצלחתי להתאים את זה לאחד מהשמות: {names_list}. "
-                    "אפשר לכתוב את השם המלא בדיוק כפי שהוא?",
+                    "לא הצלחתי להתאים את זה. אפשר לכתוב את השם המלא "
+                    "בדיוק כפי שהוא רשום במערכת?",
                     state,
                 )
             candidate = match
@@ -219,19 +239,19 @@ def handle_message(state: dict, text: str) -> Tuple[str, dict]:
                     _reset(),
                 )
             if len(matches) > 1:
-                names_list = ", ".join(m["name"] for m in matches)
+                # Privacy (review feedback): do NOT reveal which customers
+                # exist — just ask for the full name. The candidate list
+                # (id+name only, see state hygiene above) still lives in the
+                # state so the next turn can match against it.
                 new_state = {
                     "stage": STAGE_AWAIT_NAME_CLARIFICATION,
-                    # Only id + name go into the cookie state. The session
-                    # cookie is readable by the client, so full customer rows
-                    # (id_number, phone, email, ...) must NEVER be stored here.
                     "candidates": [{"id": m["id"], "name": m["name"]} for m in matches],
                     "claimed_date": claimed_date,
                     "attempts": 0,
                 }
                 return (
-                    f"נמצאו כמה לקוחות עם שם דומה: {names_list}. "
-                    "מה השם המלא שלך?",
+                    "נמצאו כמה לקוחות עם שם דומה. מה השם המלא שלך? "
+                    "(שם פרטי ושם משפחה)",
                     new_state,
                 )
             candidate = matches[0]
