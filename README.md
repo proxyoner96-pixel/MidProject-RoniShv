@@ -58,6 +58,12 @@ Security & Privacy Notes
 The database file (appointments.db) is git-ignored — records never enter version control.
 The chatbot never reveals personal data before a successful ID verification, and blocks the conversation after too many failed attempts.
 The client-side conversation state contains only non-sensitive fields (stage, candidate id/name, claimed date, attempt counter).
+Known Limitations
+Honest engineering notes — things we know could be improved with more time:
+Client-side conversation state — the chatbot's session state lives in a signed (but not encrypted) cookie. Only non-sensitive fields are stored there (stage, candidate id/name, claimed date, attempt counter), but the attempt-limit counter is therefore resettable by clearing cookies. A production system would track failed verification attempts server-side (per candidate ID, not per session).
+SQLite on a single server — the live demo runs on PythonAnywhere's free tier, which keeps the SQLite file persistent between deploys. Horizontal scaling would require migrating to PostgreSQL (a deliberate trade-off for a course project: zero infra, real persistence).
+Rate limiting — the Gemini-powered NLU and the chat endpoint have no per-IP rate limiting. Behind a real deployment, a reverse proxy or middleware (e.g. slowapi) would add that.
+Debug mode in development only — FLASK_DEBUG=1 is used locally; the live deployment runs with FLASK_DEBUG=0 and SESSION_COOKIE_SECURE=1 (see .env.example).
 Project Structure
 MidProject-RoniShv/
 ├── README.md
