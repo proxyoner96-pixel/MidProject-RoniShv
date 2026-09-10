@@ -18,10 +18,13 @@ degrades gracefully to a small rule-based fallback so the rest of the app
 """
 
 import json
+import logging
 import re
 from datetime import datetime
 
 from gemini_client import generate, is_configured, GeminiNotConfigured
+
+logger = logging.getLogger(__name__)
 
 EXTRACTION_PROMPT = """You are the NLU layer of a Hebrew appointment-verification chatbot.
 Extract structured data from the user's free-text message.
@@ -124,5 +127,5 @@ def extract_name_and_date(message: str) -> dict:
         # should degrade to the fallback, never crash the conversation.
         # A short console warning (not a full traceback) makes a real outage
         # visible during a demo without being alarming noise in normal use.
-        print(f"[nlu] Gemini unavailable ({type(exc).__name__}: {exc}) — using rule-based fallback.")
+        logger.warning("Gemini unavailable (%s: %s) — using rule-based fallback.", type(exc).__name__, exc)
         return _fallback_extract(message)

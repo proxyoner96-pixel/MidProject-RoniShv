@@ -14,10 +14,13 @@ model. If Gemini is unavailable, a clear deterministic Hebrew template is
 used instead, so the bot never goes silent because of an API hiccup.
 """
 
+import logging
 from datetime import datetime
 
 from features import customers
 from gemini_client import generate, is_configured, GeminiNotConfigured
+
+logger = logging.getLogger(__name__)
 
 PHRASING_PROMPT = """You are a friendly Hebrew-speaking appointment-desk assistant.
 Write ONE short, warm reply in Hebrew (2-4 sentences) based ONLY on the facts below.
@@ -106,5 +109,5 @@ def build_verified_reply(candidate_id: int, claimed_date: str, find_appointment)
             return text
         raise ValueError("Empty response from Gemini")
     except (GeminiNotConfigured, Exception) as exc:
-        print(f"[reply_builder] Gemini unavailable ({type(exc).__name__}: {exc}) — using template reply.")
+        logger.warning("Gemini unavailable (%s: %s) — using template reply.", type(exc).__name__, exc)
         return _template_reply(customer_name, claimed_date, appointment)
